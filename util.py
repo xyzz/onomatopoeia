@@ -1,3 +1,10 @@
+def unsignedToSigned(i, max_positive):
+    if i < max_positive:
+        return i
+    else:
+        return i - 2 * max_positive
+
+
 def readU8(f):
     return ord(f.read(1))
 
