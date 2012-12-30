@@ -40,7 +40,23 @@ textures = {
     "default:tree": ("default_tree_top.png", "default_tree.png"),
     "default:water_source": ("default_water.png", "default_water.png"),
     "default:water_flowing": ("default_water.png", "default_water.png"),
-    "default:wood": ("default_wood.png", "default_wood.png")
+    "default:wood": ("default_wood.png", "default_wood.png"),
+    "fire:basic_flame": ("fire_basic_flame.png", "fire_basic_flame.png"),
+    "wool:white": ("wool_white.png", "wool_white.png"),
+    "wool:grey": ("wool_grey.png", "wool_grey.png"),
+    "wool:black": ("wool_black.png", "wool_black.png"),
+    "wool:red": ("wool_red.png", "wool_red.png"),
+    "wool:yellow": ("wool_yellow.png", "wool_yellow.png"),
+    "wool:green": ("wool_green.png", "wool_green.png"),
+    "wool:cyan": ("wool_cyan.png", "wool_cyan.png"),
+    "wool:blue": ("wool_blue.png", "wool_blue.png"),
+    "wool:magenta": ("wool_magenta.png", "wool_magenta.png"),
+    "wool:orange": ("wool_orange.png", "wool_orange.png"),
+    "wool:violet": ("wool_violet.png", "wool_violet.png"),
+    "wool:brown": ("wool_brown.png", "wool_brown.png"),
+    "wool:pink": ("wool_pink.png", "wool_pink.png"),
+    "wool:dark_grey": ("wool_dark_grey.png", "wool_dark_grey.png"),
+    "wool:dark_green": ("wool_dark_green.png", "wool_dark_green.png")
 }
 
 blocks = {}
