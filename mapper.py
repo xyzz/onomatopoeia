@@ -144,10 +144,10 @@ def dummyMakeTile(row, col):
 
 
 def saveTile(tile, row, col, zoom=5):
-    path = os.path.join("data", "{}".format(zoom), "{}".format(row))
+    path = os.path.join("data", str(zoom), str(row))
     if not os.path.exists(path):
         os.makedirs(path)
-    tile.save(os.path.join(path, "{}.png".format(col)))
+    tile.save(os.path.join(path, "%d.png" % col))
 
 cnt = 0
 done = set()
@@ -159,7 +159,7 @@ def stupidMakeTiles(x, z):
     step = 0
     last = 0
     while True:
-        print("tiling {} {}".format(x + step, z + step))
+        print("tiling %d %d" % (x + step, z + step))
         row, col = coordsToGrid(x + step, z + step)
         y = chunks3(canvas, x + step, z + step, step)
         #canvas.save("step_{}.png".format(step))
@@ -172,7 +172,7 @@ def stupidMakeTiles(x, z):
             cnt += 1
         done.add((x + step, z + step))
         step += 1
-        print("y is {}".format(y))
+        print("y is %d" % y)
         if y == -1:
             break
 
@@ -188,7 +188,7 @@ coords.sort()
 for coord in coords:
     if coord in done:
         continue
-    print("{}% done".format(100.0 * cnt / len(coords)))
+    print("{0}% done".format(100.0 * cnt / len(coords)))
     stupidMakeTiles(*coord)
 
 """
@@ -227,16 +227,16 @@ for zoom in range(4, -1, -1):
         #print("join {} {}".format(row, col))
         R = row / 2
         C = col / 2
-        path = os.path.join("data", "{}".format(zoom), "{}".format(R))
+        path = os.path.join("data", str(zoom), str(R))
         if not os.path.exists(path):
             os.makedirs(path)
         canvas = Image.new("RGBA", (BLOCK_SIZE, BLOCK_SIZE))
         for dx in range(0, 2):
             for dz in range(0, 2):
                 try:
-                    tile = Image.open(os.path.join("data", "{}".format(zoom + 1), "{}".format(row + dx), "{}.png".format(col + dz))).convert("RGBA")
+                    tile = Image.open(os.path.join("data", str(zoom + 1), str(row + dx), "%d.png" % (col + dz))).convert("RGBA")
                 except IOError:
                     tile = Image.new("RGBA", (BLOCK_SIZE, BLOCK_SIZE))
                 tile = tile.resize((BLOCK_SIZE/2, BLOCK_SIZE/2))
                 canvas.paste(tile, (dz * BLOCK_SIZE/2, dx * BLOCK_SIZE/2), tile)
-        canvas.save(os.path.join(path, "{}.png".format(C)))
+        canvas.save(os.path.join(path, "%d.png" % C))
