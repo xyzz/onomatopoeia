@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 import os.path
 import os
+import sys
 from PIL import Image, ImageDraw
 from map import Map
 from blocks import build_block
@@ -77,23 +78,26 @@ def drawNode(canvas, x, y, z, block, start):
 
 
 def drawBlock(canvas, bx, by, bz, start):
+    """ returns max y of visible node """
     map_block = map.getBlock(bx, by, bz)
+    maxy = -1
     for y in range(NODES_PER_BLOCK):
         for z in range(NODES_PER_BLOCK):
             for x in range(NODES_PER_BLOCK):
                 p = map_block.get(x, y, z)
                 if p in textures:
                     drawNode(canvas, x + bx * NODES_PER_BLOCK, y + by * NODES_PER_BLOCK, z + bz * NODES_PER_BLOCK, blocks[p], start)
+                    maxy = max(maxy, y + by * NODES_PER_BLOCK)
+    return maxy
 
 cached_chunks = {}
 
 def makeChunk(cx, cz):
-    if (cx, cz) not in cached_chunks:
-        canvas = Image.new("RGBA", (BLOCK_SIZE, CHUNK_HEIGHT))
-        for by in range(-8, 8):
-            drawBlock(canvas, cx, by, cz, (BLOCK_SIZE/2 * (cx - cz + 1) - NODE_SIZE/2, BLOCK_SIZE/4 * (BLOCKS_PER_CHUNK - cz - cx) - NODE_SIZE/2))
-        cached_chunks[(cx, cz)] = canvas
-    return cached_chunks[(cx, cz)]
+    maxy = -1
+    canvas = Image.new("RGBA", (BLOCK_SIZE, CHUNK_HEIGHT))
+    for by in range(-8, 8):
+        maxy = max(maxy, drawBlock(canvas, cx, by, cz, (BLOCK_SIZE/2 * (cx - cz + 1) - NODE_SIZE/2, BLOCK_SIZE/4 * (BLOCKS_PER_CHUNK - cz - cx) - NODE_SIZE/2)))
+    return canvas, maxy
 
 
 def fullMap():
@@ -108,34 +112,86 @@ def fullMap():
 
 
 def chunks3(canvas, x, z, step):
-    chunk = makeChunk(x + step, z + step)
-    canvas.paste(chunk, (0, (16 + step) * BLOCK_SIZE/2), chunk)
-    #del chunk
-    chunk = makeChunk(x + step + 1, z + step)
-    canvas.paste(chunk, (-BLOCK_SIZE/2, (16 + step) * BLOCK_SIZE/2 + BLOCK_SIZE/4), chunk)
-    #del chunk
-    chunk = makeChunk(x + step, z + step + 1)
-    canvas.paste(chunk, (BLOCK_SIZE/2, (16 + step) * BLOCK_SIZE/2 + BLOCK_SIZE/4), chunk)
-    #del chunk
+    maxy = -1
+    chunk, y = makeChunk(x, z)
+    maxy = max(maxy, y)
+    canvas.paste(chunk, (0, step * BLOCK_SIZE/2), chunk)
+    del chunk
+    chunk, y = makeChunk(x + 1, z)
+    maxy = max(maxy, y)
+    canvas.paste(chunk, (-BLOCK_SIZE/2, step * BLOCK_SIZE/2 + BLOCK_SIZE/4), chunk)
+    del chunk
+    chunk, y = makeChunk(x, z + 1)
+    maxy = max(maxy, y)
+    canvas.paste(chunk, (BLOCK_SIZE/2, step * BLOCK_SIZE/2 + BLOCK_SIZE/4), chunk)
+    del chunk
+    return maxy
 
 # row = x + z
 # col = z - x
 # x = (row - col) / 2
 # z = (row + col) / 2
+"""
 def dummyMakeTile(row, col):
     x, z = gridToCoords(row, col)
-    x = (row - col) / 2
-    z = (row + col) / 2
     canvas = Image.new("RGBA", (BLOCK_SIZE, 18 * BLOCK_SIZE/2))
     for i in range(-16, 2):
-        print("step {}".format(i))
-        chunks3(canvas, x, z, i)
+        chunks3(canvas, x, z, 16 + i)
     tile = canvas.crop((0, 16 * BLOCK_SIZE/2, BLOCK_SIZE, 18 * BLOCK_SIZE/2))
     del canvas
     return tile
+"""
 
-coords = map.getCoordinatesToDraw()
 
+def saveTile(tile, row, col, zoom=5):
+    path = os.path.join("data", "{}".format(zoom), "{}".format(row))
+    if not os.path.exists(path):
+        os.makedirs(path)
+    tile.save(os.path.join(path, "{}.png".format(col)))
+
+cnt = 0
+done = set()
+
+# assume it's safe to start with (x, z)
+def stupidMakeTiles(x, z):
+    # TODO:                                  v
+    canvas = Image.new("RGBA", (BLOCK_SIZE, 100 * BLOCK_SIZE))
+    step = 0
+    last = 0
+    while True:
+        print("tiling {} {}".format(x + step, z + step))
+        row, col = coordsToGrid(x + step, z + step)
+        y = chunks3(canvas, x + step, z + step, step)
+        #canvas.save("step_{}.png".format(step))
+        if row % 4 == 0:
+            tile = canvas.crop((0, last, BLOCK_SIZE, last + BLOCK_SIZE))
+            last += BLOCK_SIZE
+            saveTile(tile, row / 4, col / 2)
+            del tile
+            global cnt
+            cnt += 1
+        done.add((x + step, z + step))
+        step += 1
+        print("y is {}".format(y))
+        if y == -1:
+            break
+
+
+raw_coords = list(map.getCoordinatesToDraw())
+coords = []
+for row, col in raw_coords:
+    if row % 4 != 0 or col % 2 != 0:
+        continue
+    coords.append(gridToCoords(row, col))
+coords.sort()
+
+for coord in coords:
+    if coord in done:
+        continue
+    print("{}% done".format(100.0 * cnt / len(coords)))
+    stupidMakeTiles(*coord)
+
+"""
 step = 0
 for row, col in coords:
     step += 1
@@ -146,10 +202,11 @@ for row, col in coords:
     if not os.path.exists(path):
         os.makedirs(path)
     dummyMakeTile(row, col).save(os.path.join(path, "{}.png".format(col / 2)))
+"""
 
 # zoom 4 ---> 0
 
-to_join = coords
+to_join = raw_coords
 
 for zoom in range(4, -1, -1):
     new_join = set()
@@ -165,7 +222,6 @@ for zoom in range(4, -1, -1):
             col -= 1
         new_join.add((row, col))
     to_join = new_join
-    print(to_join)
 
     for row, col in to_join:
         #print("join {} {}".format(row, col))
@@ -177,8 +233,6 @@ for zoom in range(4, -1, -1):
         canvas = Image.new("RGBA", (BLOCK_SIZE, BLOCK_SIZE))
         for dx in range(0, 2):
             for dz in range(0, 2):
-                if zoom == 3 and row == 2 and col == -2:
-                    print("test...")
                 try:
                     tile = Image.open(os.path.join("data", "{}".format(zoom + 1), "{}".format(row + dx), "{}.png".format(col + dz))).convert("RGBA")
                 except IOError:
