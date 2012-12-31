@@ -6,13 +6,21 @@ import os.path
 from util import *
 
 
-def getBlockAsInteger(x, y, z):
-    return z * 16777216 + y * 4096 + x
-
-
 class Map(object):
     def __init__(self, path):
         self.conn = sqlite3.connect(os.path.join(path, "map.sqlite"))
+
+    def getCoordinatesToDraw(self):
+        result = set()
+        cur = self.conn.cursor()
+        cur.execute("SELECT `pos` FROM `blocks`")
+        while True:
+            r = cur.fetchone()
+            if not r:
+                break
+            x, y, z = getIntegerAsBlock(r[0])
+            result.add(coordsToGrid(x, z))
+        return result
 
     def getBlock(self, x, y, z):
         cur = self.conn.cursor()
