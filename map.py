@@ -6,12 +6,36 @@ import os.path
 from util import *
 
 
+TRANSLATION_TABLE = {
+    1: 0x800,  # CONTENT_GRASS
+    4: 0x801,  # CONTENT_TREE
+    5: 0x802,  # CONTENT_LEAVES
+    6: 0x803,  # CONTENT_GRASS_FOOTSTEPS
+    7: 0x804,  # CONTENT_MESE
+    8: 0x805,  # CONTENT_MUD
+    10: 0x806,  # CONTENT_CLOUD
+    11: 0x807,  # CONTENT_COALSTONE
+    12: 0x808,  # CONTENT_WOOD
+    13: 0x809,  # CONTENT_SAND
+    18: 0x80a,  # CONTENT_COBBLE
+    19: 0x80b,  # CONTENT_STEEL
+    20: 0x80c,  # CONTENT_GLASS
+    22: 0x80d,  # CONTENT_MOSSYCOBBLE
+    23: 0x80e,  # CONTENT_GRAVEL
+    24: 0x80f,  # CONTENT_SANDSTONE
+    25: 0x810,  # CONTENT_CACTUS
+    26: 0x811,  # CONTENT_BRICK
+    27: 0x812,  # CONTENT_CLAY
+    28: 0x813,  # CONTENT_PAPYRUS
+    29: 0x814}  # CONTENT_BOOKSHELF
+
+
 class Map(object):
     def __init__(self, path):
         self.conn = sqlite3.connect(os.path.join(path, "map.sqlite"))
 
-    def getCoordinatesToDraw(self):
-        result = set()
+    def getCoordinates(self):
+        result = []
         cur = self.conn.cursor()
         cur.execute("SELECT `pos` FROM `blocks`")
         while True:
@@ -19,7 +43,14 @@ class Map(object):
             if not r:
                 break
             x, y, z = getIntegerAsBlock(r[0])
-            result.add(coordsToGrid(x, z))
+            result.append((x, y, z))
+        return result
+
+    def getCoordinatesToDraw(self):
+        result = set()
+        raw = self.getCoordinates()
+        for coord in raw:
+            result.add(coordsToGrid(coord[0], coord[1]))
         return result
 
     def getBlock(self, x, y, z):
@@ -28,7 +59,12 @@ class Map(object):
         r = cur.fetchone()
         if not r:
             return DummyMapBlock()
-        f = cStringIO.StringIO(r[0])
+        return MapBlock(r[0])
+
+
+class MapBlock(object):
+    def __init__(self, data):
+        f = cStringIO.StringIO(data)
         version = readU8(f)
         flags = f.read(1)
 
@@ -118,20 +154,27 @@ class Map(object):
                 readS32(f)
                 readS32(f)
 
-        #print(id_to_name)
-        #print(mapdata)
-        return MapBlock(id_to_name, mapdata)
-
-
-class MapBlock(object):
-    def __init__(self, id_to_name, mapdata, version=99):
         self.id_to_name = id_to_name
         self.mapdata = mapdata
         self.version = version
+        self.timestamp = timestamp
 
     def get(self, x, y, z):
         datapos = x + y * 16 + z * 256
         return self.id_to_name[(self.mapdata[datapos * 2] << 8) | (self.mapdata[datapos * 2 + 1])]
+        # TODO: v
+        return (self.mapdata[datapos*2] << 8) | (self.mapdata[datapos*2 + 1])
+        if self.version >= 24:
+            return (self.mapdata[datapos*2] << 8) | (self.mapdata[datapos*2 + 1])
+        elif self.version >= 20:
+            if self.mapdata[datapos] < 0x80:
+                return self.mapdata[datapos]
+            else:
+                return (self.mapdata[datapos] << 4) | (self.mapdata[datapos + 0x2000] >> 4)
+        elif 16 <= self.version < 20:
+            return TRANSLATION_TABLE.get(self.mapdata[datapos], self.mapdata[datapos])
+        else:
+            raise Exception("Unsupported map format: " + str(self.version))
 
 
 class DummyMapBlock(object):
