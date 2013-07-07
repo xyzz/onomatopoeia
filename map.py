@@ -1,5 +1,5 @@
 import sqlite3
-import cStringIO
+from cStringIO import StringIO
 import zlib
 import array
 import os.path
@@ -10,7 +10,7 @@ class Map(object):
     def __init__(self, path):
         self.conn = sqlite3.connect(os.path.join(path, "map.sqlite"))
 
-    def getCoordinatesToDraw(self):
+    def get_draw_grid(self):
         result = set()
         cur = self.conn.cursor()
         cur.execute("SELECT `pos` FROM `blocks`")
@@ -19,16 +19,16 @@ class Map(object):
             if not r:
                 break
             x, y, z = getIntegerAsBlock(r[0])
-            result.add(coordsToGrid(x, z))
+            result.add(coordinates_to_grid(x, z))
         return result
 
-    def getBlock(self, x, y, z):
+    def get_block(self, x, y, z):
         cur = self.conn.cursor()
         cur.execute("SELECT `data` FROM `blocks` WHERE `pos`==? LIMIT 1", (getBlockAsInteger(x, y, z), ))
         r = cur.fetchone()
         if not r:
             return DummyMapBlock()
-        f = cStringIO.StringIO(r[0])
+        f = StringIO(r[0])
         version = readU8(f)
         flags = f.read(1)
 
@@ -51,7 +51,7 @@ class Map(object):
 
         # Reuse the unused tail of the file
         f.close()
-        f = cStringIO.StringIO(dec_o.unused_data)
+        f = StringIO(dec_o.unused_data)
 
         # zlib-compressed node metadata list
         dec_o = zlib.decompressobj()
@@ -63,7 +63,7 @@ class Map(object):
 
         # Reuse the unused tail of the file
         f.close()
-        f = cStringIO.StringIO(dec_o.unused_data)
+        f = StringIO(dec_o.unused_data)
         data_after_node_metadata = dec_o.unused_data
 
         if version <= 21:
@@ -107,7 +107,7 @@ class Map(object):
                 node_id = readU16(f)
                 name_len = readU16(f)
                 name = f.read(name_len)
-                id_to_name[node_id] = name
+                id_to_name[node_id] = name.decode("ascii")
 
         # Node timers
         if version >= 25:

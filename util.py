@@ -34,9 +34,9 @@ def readS32(f):
     return unsignedToSigned(ord(f.read(1)) * 256 * 256 * 256 + ord(f.read(1)) * 256 * 256 + ord(f.read(1)) * 256 + ord(f.read(1)), 2 ** 31)
 
 
-def gridToCoords(row, col):
-    return (row - col) / 2, (row + col) / 2
+def grid_to_coordinates(row, col):
+    return (col + row) / 2, (col - row) / 2
 
 
-def coordsToGrid(x, z):
-    return x + z, z - x
+def coordinates_to_grid(x, z):
+    return x - z, x + z

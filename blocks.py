@@ -1,16 +1,7 @@
 # Taken from Minecraft Overviewer
-import sys
-import imp
-import os
-import os.path
-import zipfile
-from cStringIO import StringIO
 import math
-from random import randint
 import numpy
-from PIL import Image, ImageEnhance, ImageOps, ImageDraw
-import logging
-import functools
+from PIL import Image, ImageEnhance, ImageDraw
 
 
 bgcolor=(26, 26, 26, 0)
